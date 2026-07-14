@@ -185,7 +185,7 @@ export default function App() {
                 <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
 
                   <div className="flex flex-col items-center lg:items-start mb-10 text-center lg:text-left relative">
-                    <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">My Tasks</h1>
+                    <h1 className="text-4xl font-black text-orange-500 dark:text-orange-400 tracking-tight">My Tasks</h1>
                     {stats.completed > 0 && (
                       <button onClick={clearCompleted} className="absolute right-0 top-0 p-3 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-100 transition-all"><Trash2 size={20} /></button>
                     )}
