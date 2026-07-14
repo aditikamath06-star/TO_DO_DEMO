@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Include the database files for backup -->
+        <include domain="database" path="todolist.db"/>
+        <include domain="database" path="todolist.db-shm"/>
+        <include domain="database" path="todolist.db-wal"/>
+
+        <!-- Include shared preferences if any -->
+        <include domain="sharedpref" path="."/>
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="todolist.db"/>
+        <include domain="database" path="todolist.db-shm"/>
+        <include domain="database" path="todolist.db-wal"/>
+        <include domain="sharedpref" path="."/>
+    </device-transfer>
+</data-extraction-rules>

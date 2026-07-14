@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Include the database files for full backup -->
+    <include domain="database" path="todolist.db"/>
+    <include domain="database" path="todolist.db-shm"/>
+    <include domain="database" path="todolist.db-wal"/>
+
+    <!-- Include shared preferences -->
+    <include domain="sharedpref" path="."/>
+</full-backup-content>
