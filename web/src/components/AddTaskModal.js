@@ -8,7 +8,7 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
   const [priority, setPriority] = useState(initialData?.priority || 'MEDIUM');
   const [category, setCategory] = useState(initialData?.category || 'WORK');
   const [dueDate, setDueDate] = useState(initialData?.dueDate || '');
-
+  const [collaborators, setCollaborators] = useState(initialData?.collaborators?.join(', ') || '');
   // Calculate local date string for 'min' attribute
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -26,7 +26,8 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
       category,
       dueDate,
       completed: initialData?.completed || false,
-      createdAt: initialData?.createdAt || Date.now()
+      createdAt: initialData?.createdAt || Date.now(),
+      collaborators: collaborators.split(',').map(c => c.trim()).filter(Boolean)
     });
     onClose();
   };
@@ -55,6 +56,19 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full h-14 px-4 bg-white dark:bg-[#20202a] border border-[#7c3aed] rounded-xl focus:ring-1 focus:ring-[#7c3aed] outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-600 dark:text-slate-400 flex items-center justify-between">
+              Collaborators (Emails)
+              <span className="text-xs text-slate-400 font-normal">Optional</span>
+            </label>
+            <input
+              placeholder="e.g. friend@example.com, boss@company.com"
+              value={collaborators}
+              onChange={(e) => setCollaborators(e.target.value)}
+              className="w-full h-12 px-4 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl focus:border-slate-300 dark:focus:border-white/20 outline-none transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
             />
           </div>
 

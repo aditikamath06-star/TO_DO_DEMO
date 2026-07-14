@@ -86,6 +86,22 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
               {formattedDate}
             </div>
           )}
+
+          {/* Collaborators Chip */}
+          {task.collaborators && task.collaborators.length > 0 && (
+            <div className="flex items-center -space-x-1 ml-1" title={task.collaborators.join(', ')}>
+              {task.collaborators.slice(0, 3).map((email, i) => (
+                <div key={i} className="w-5 h-5 rounded-full bg-[#7c3aed] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-zinc-900 shadow-sm z-10" style={{ zIndex: 10 - i }}>
+                  {email.charAt(0).toUpperCase()}
+                </div>
+              ))}
+              {task.collaborators.length > 3 && (
+                <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center text-[8px] font-bold border border-white dark:border-zinc-900 shadow-sm z-0">
+                  +{task.collaborators.length - 3}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

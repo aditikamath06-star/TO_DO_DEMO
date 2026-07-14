@@ -21,10 +21,16 @@ const mapTask = (row) => ({
   completed: row.completed === 1
 });
 
-// 1. Get all tasks for the logged in user
+// 1. Get all tasks for the logged in user (owned or collaborative)
 app.get('/api/tasks', auth, async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM tasks WHERE user_id = ?', [req.user.id]);
+    const sql = `
+      SELECT DISTINCT t.* 
+      FROM tasks t
+      LEFT JOIN task_collaborators tc ON t.id = tc.task_id
+      WHERE t.user_id = ? OR tc.user_id = ?
+    `;
+    const [rows] = await pool.execute(sql, [req.user.id, req.user.id]);
     res.json(rows.map(mapTask));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,7 +39,7 @@ app.get('/api/tasks', auth, async (req, res) => {
 
 // 2. Create a new task
 app.post('/api/tasks', auth, async (req, res) => {
-  const { title, description, priority, category, dueDate, completed, createdAt } = req.body;
+  const { title, description, priority, category, dueDate, completed, createdAt, collaborators } = req.body;
   const sql = `
     INSERT INTO tasks (user_id, title, description, priority, category, dueDate, completed, createdAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -51,8 +57,24 @@ app.post('/api/tasks', auth, async (req, res) => {
 
   try {
     const [result] = await pool.execute(sql, params);
+    const taskId = result.insertId;
+
+    if (collaborators && Array.isArray(collaborators) && collaborators.length > 0) {
+      const placeholders = collaborators.map(() => '?').join(',');
+      const [users] = await pool.execute(`SELECT id FROM users WHERE email IN (${placeholders})`, collaborators);
+      
+      if (users.length > 0) {
+        const insertCollabSql = 'INSERT IGNORE INTO task_collaborators (task_id, user_id) VALUES ' + users.map(() => '(?, ?)').join(',');
+        const insertParams = [];
+        users.forEach(u => {
+          insertParams.push(taskId, u.id);
+        });
+        await pool.execute(insertCollabSql, insertParams);
+      }
+    }
+
     res.json({
-      id: result.insertId,
+      id: taskId,
       user_id: req.user.id,
       title,
       description: params[2],
@@ -60,7 +82,8 @@ app.post('/api/tasks', auth, async (req, res) => {
       category: params[4],
       dueDate: params[5],
       completed: params[6] === 1,
-      createdAt: params[7]
+      createdAt: params[7],
+      collaborators: collaborators || []
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

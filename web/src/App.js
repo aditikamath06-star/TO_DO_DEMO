@@ -56,7 +56,7 @@ export default function App() {
         return;
       }
 
-      fetch('http://localhost:5000/api/tasks', {
+      fetch('http://192.168.68.227:5000/api/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
@@ -109,7 +109,7 @@ export default function App() {
   const addTask = async (task) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/tasks', {
+      const res = await fetch('http://192.168.68.227:5000/api/tasks', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function App() {
     const updatedTask = { ...task, completed: !task.completed };
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}`, {
+      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function App() {
   const deleteTask = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/tasks/${id}`, { 
+      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -164,7 +164,7 @@ export default function App() {
   const editTask = async (updatedTask) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/tasks/${updatedTask.id}`, {
+      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${updatedTask.id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export default function App() {
     const completedTasks = tasks.filter(t => t.completed);
     try {
       const token = localStorage.getItem('token');
-      await Promise.all(completedTasks.map(t => fetch(`http://localhost:5000/api/tasks/${t.id}`, { 
+      await Promise.all(completedTasks.map(t => fetch(`http://192.168.68.227:5000/api/tasks/${t.id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })));
@@ -241,7 +241,7 @@ export default function App() {
                 <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
 
                   <div className="flex flex-col items-center lg:items-start mb-10 text-center lg:text-left relative z-10">
-                    <h1 className="text-4xl font-black text-orange-500 dark:text-orange-400 tracking-tight dark:drop-shadow-md">My Tasks</h1>
+                    <h1 className="text-4xl font-black text-[#7C4DFF] tracking-tight dark:drop-shadow-md">My Tasks</h1>
                     {stats.completed > 0 && (
                       <button onClick={clearCompleted} className="absolute right-0 top-0 p-3 bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 border border-transparent dark:border-red-500/20 rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-all"><Trash2 size={20} /></button>
                     )}
