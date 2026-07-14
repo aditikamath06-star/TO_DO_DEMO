@@ -9,6 +9,12 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
   const [category, setCategory] = useState(initialData?.category || 'WORK');
   const [dueDate, setDueDate] = useState(initialData?.dueDate || '');
 
+  // Calculate local date string for 'min' attribute
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const minDateString = `${yyyy}-${mm}-${dd}`;
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -31,7 +37,7 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar"
+        className="w-full max-w-lg bg-white dark:bg-[#181820] rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar border border-transparent dark:border-white/5"
       >
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{initialData ? 'Edit Task' : 'Add New Task'}</h2>
@@ -42,29 +48,29 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-bold text-primary">Add new task</label>
+            <label className="text-sm font-bold text-[#7c3aed]">Add new task</label>
             <input
               autoFocus
               placeholder="e.g. Design new landing page"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-14 px-4 bg-slate-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white"
+              className="w-full h-14 px-4 bg-white dark:bg-[#20202a] border border-[#7c3aed] rounded-xl focus:ring-1 focus:ring-[#7c3aed] outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-primary">Description</label>
+            <label className="text-sm font-bold text-[#7c3aed]">Description</label>
             <textarea
               placeholder="Add more details..."
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-4 bg-slate-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white resize-none"
+              className="w-full p-4 bg-slate-50 dark:bg-[#20202a] border-none rounded-xl focus:ring-1 focus:ring-[#7c3aed]/50 outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
             />
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-bold text-primary">Priority Level</label>
+            <label className="text-sm font-bold text-[#7c3aed]">Priority Level</label>
             <div className="flex gap-3">
               {['LOW', 'MEDIUM', 'HIGH'].map((p) => (
                 <button
@@ -73,8 +79,8 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
                   onClick={() => setPriority(p)}
                   className={`flex-1 h-12 rounded-xl font-bold text-xs transition-all ${
                     priority === p
-                      ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-[1.02]'
-                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
+                      ? 'bg-[#7c3aed] text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]'
+                      : 'bg-slate-50 dark:bg-[#20202a] text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#2a2a35]'
                   }`}
                 >
                   {p}
@@ -84,17 +90,17 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-bold text-primary">Category</label>
+            <label className="text-sm font-bold text-[#7c3aed]">Category</label>
             <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
               {['WORK', 'PERSONAL', 'SHOPPING', 'EDUCATION', 'OTHER'].map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setCategory(c)}
-                  className={`px-4 h-10 rounded-xl font-bold text-[10px] whitespace-nowrap transition-all ${
+                  className={`px-4 h-10 rounded-full font-bold text-[10px] whitespace-nowrap transition-all ${
                     category === c
-                      ? 'bg-slate-800 dark:bg-zinc-100 text-white dark:text-zinc-900'
-                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
+                      ? 'bg-[#181820] text-white dark:bg-white dark:text-black'
+                      : 'bg-slate-50 dark:bg-[#20202a] text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#2a2a35]'
                   }`}
                 >
                   {c}
@@ -104,14 +110,15 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-primary">Due Date</label>
+            <label className="text-sm font-bold text-[#7c3aed]">Due Date</label>
             <div className="relative">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
               <input
                 type="date"
+                min={minDateString}
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full h-14 pl-12 pr-4 bg-slate-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white"
+                className="w-full h-14 pl-12 pr-4 bg-slate-50 dark:bg-[#20202a] border-none rounded-xl focus:ring-1 focus:ring-[#7c3aed]/50 outline-none transition-all text-slate-900 dark:text-white"
               />
             </div>
           </div>
@@ -120,13 +127,13 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-14 border border-slate-200 dark:border-zinc-800 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all"
+              className="flex-1 h-14 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 h-14 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all"
+              className="flex-1 h-14 bg-[#7c3aed] text-white rounded-2xl font-bold hover:bg-[#6d28d9] transition-all shadow-[0_0_15px_rgba(124,58,237,0.3)]"
             >
               {initialData ? 'Save Changes' : 'Create Task'}
             </button>

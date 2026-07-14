@@ -11,12 +11,36 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      if (email.trim() && password.trim()) onLoginSuccess();
-    } else {
-      if (email.trim() && username.trim() && password.trim() && password === confirmPassword) onLoginSuccess();
+    
+    try {
+      const endpoint = isLogin ? 'http://localhost:5000/api/auth/login' : 'http://localhost:5000/api/auth/register';
+      const body = isLogin 
+        ? { email, password } 
+        : { username, email, password };
+        
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert(data.error || 'Authentication failed');
+        return;
+      }
+      
+      // Save token and user info
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      onLoginSuccess();
+    } catch (err) {
+      console.error(err);
+      alert('Network error connecting to the backend.');
     }
   };
 
