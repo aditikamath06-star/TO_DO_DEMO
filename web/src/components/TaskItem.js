@@ -10,7 +10,24 @@ const priorityColors = {
 };
 
 export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
+  let localDueDate = null;
+  let formattedDate = '';
+  if (task.dueDate) {
+    // Parse YYYY-MM-DD in local time to avoid timezone offset bugs
+    const parts = task.dueDate.split('-');
+    if (parts.length === 3) {
+      localDueDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      formattedDate = localDueDate.toLocaleDateString();
+    } else {
+      localDueDate = new Date(task.dueDate);
+      formattedDate = localDueDate.toLocaleDateString();
+    }
+  }
+
+  // Set time of "now" to 00:00:00 for accurate overdue calculation
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const isOverdue = localDueDate && localDueDate < now && !task.completed;
 
   return (
     <motion.div
@@ -29,8 +46,8 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
         className={clsx(
           "w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all",
           task.completed
-            ? "bg-primary border-primary text-white"
-            : "border-slate-300 dark:border-zinc-700 text-transparent"
+            ? "bg-[#7c3aed] border-[#7c3aed] text-white"
+            : "border-slate-300 dark:border-zinc-700 text-transparent hover:border-[#7c3aed]"
         )}
       >
         <Check size={14} strokeWidth={4} />
@@ -46,8 +63,8 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
         </h4>
         {task.description && (
           <p className={clsx(
-            "text-sm text-slate-500 dark:text-zinc-500 line-clamp-2 mt-1",
-            task.completed && "text-slate-300 dark:text-zinc-700"
+            "text-sm text-slate-500 dark:text-zinc-400 line-clamp-2 mt-1",
+            task.completed && "text-slate-300 dark:text-zinc-600"
           )}>
             {task.description}
           </p>
@@ -66,7 +83,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
               isOverdue ? "bg-red-50 text-red-500" : "bg-slate-50 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500"
             )}>
               <Calendar size={10} />
-              {new Date(task.dueDate).toLocaleDateString()}
+              {formattedDate}
             </div>
           )}
         </div>

@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const pool = require('./db');
+const authRouter = require('./routes/auth');
+const auth = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -10,55 +12,34 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Database setup
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error connecting to database', err);
-  } else {
-    console.log('Connected to SQLite database');
-    db.run(`
-      CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY,
-        title TEXT NOT NULL,
-        description TEXT,
-        priority TEXT NOT NULL,
-        category TEXT NOT NULL,
-        dueDate TEXT,
-        completed INTEGER NOT NULL DEFAULT 0,
-        createdAt INTEGER NOT NULL
-      )
-    `);
-  }
-});
+// Routes
+app.use('/api/auth', authRouter);
 
-// Helper function to map row to task object
+// Helper to map DB row to JS boolean for completed
 const mapTask = (row) => ({
   ...row,
   completed: row.completed === 1
 });
 
-// Routes
-// 1. Get all tasks
-app.get('/api/tasks', (req, res) => {
-  db.all('SELECT * FROM tasks', [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+// 1. Get all tasks for the logged in user
+app.get('/api/tasks', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM tasks WHERE user_id = ?', [req.user.id]);
     res.json(rows.map(mapTask));
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 2. Create a new task
-app.post('/api/tasks', (req, res) => {
-  const { id, title, description, priority, category, dueDate, completed, createdAt } = req.body;
+app.post('/api/tasks', auth, async (req, res) => {
+  const { title, description, priority, category, dueDate, completed, createdAt } = req.body;
   const sql = `
-    INSERT INTO tasks (id, title, description, priority, category, dueDate, completed, createdAt)
+    INSERT INTO tasks (user_id, title, description, priority, category, dueDate, completed, createdAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const params = [
-    id || Date.now(),
+    req.user.id,
     title,
     description || '',
     priority || 'MEDIUM',
@@ -68,13 +49,11 @@ app.post('/api/tasks', (req, res) => {
     createdAt || Date.now()
   ];
 
-  db.run(sql, params, function (err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const [result] = await pool.execute(sql, params);
     res.json({
-      id: params[0],
+      id: result.insertId,
+      user_id: req.user.id,
       title,
       description: params[2],
       priority: params[3],
@@ -83,17 +62,19 @@ app.post('/api/tasks', (req, res) => {
       completed: params[6] === 1,
       createdAt: params[7]
     });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 3. Update a task
-app.put('/api/tasks/:id', (req, res) => {
+app.put('/api/tasks/:id', auth, async (req, res) => {
   const id = req.params.id;
   const { title, description, priority, category, dueDate, completed, createdAt } = req.body;
   const sql = `
     UPDATE tasks 
     SET title = ?, description = ?, priority = ?, category = ?, dueDate = ?, completed = ?, createdAt = ?
-    WHERE id = ?
+    WHERE id = ? AND user_id = ?
   `;
   const params = [
     title,
@@ -103,28 +84,33 @@ app.put('/api/tasks/:id', (req, res) => {
     dueDate || '',
     completed ? 1 : 0,
     createdAt,
-    id
+    id,
+    req.user.id
   ];
 
-  db.run(sql, params, function (err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
+  try {
+    const [result] = await pool.execute(sql, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Task not found or you do not have permission to edit it.' });
     }
-    res.json({ id: parseInt(id, 10), title, description, priority, category, dueDate, completed, createdAt });
-  });
+    res.json({ id: parseInt(id, 10), user_id: req.user.id, title, description, priority, category, dueDate, completed, createdAt });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 4. Delete a task
-app.delete('/api/tasks/:id', (req, res) => {
+app.delete('/api/tasks/:id', auth, async (req, res) => {
   const id = req.params.id;
-  db.run('DELETE FROM tasks WHERE id = ?', id, function (err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
+  try {
+    const [result] = await pool.execute('DELETE FROM tasks WHERE id = ? AND user_id = ?', [id, req.user.id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Task not found or you do not have permission to delete it.' });
     }
     res.json({ message: 'Task deleted', id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Start Server
