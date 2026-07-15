@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,12 +13,35 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(124, 77, 255, 0.2); border-radius: 10px; }
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(124, 77, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -33,6 +57,7 @@
         }
     </script>
 </head>
+
 <body class="bg-slate-50 transition-colors duration-300">
     <div id="root"></div>
 
@@ -120,7 +145,7 @@
                 localStorage.setItem('tasks', JSON.stringify(tasks));
                 localStorage.setItem('isLoggedIn', isLoggedIn);
                 lucide.createIcons();
-                if(isDarkMode) document.documentElement.classList.add('dark');
+                if (isDarkMode) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
             }, [tasks, isLoggedIn, isDarkMode, activeTab, mobileMenu]);
 
@@ -154,19 +179,19 @@
                             </header>
 
                             <AnimatePresence mode='wait'>
-                                    <motion.div key="tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-                                            <div className="xl:col-span-4 space-y-6">
-                                                <div className="w-full bg-gradient-to-br from-indigo-600 to-sky-400 p-8 rounded-[2.5rem] text-white shadow-xl">
-                                                    <h3 className="text-3xl font-black mb-1">{stats.completed} / {stats.total}</h3>
-                                                    <p className="text-white/70 text-xs font-bold uppercase tracking-widest">Tasks Accomplished</p>
-                                                </div>
-                                            </div>
-                                            <div className="xl:col-span-8 space-y-2">
-                                                {tasks.map(t => <TaskItem key={t.id} task={t} onToggle={id => setTasks(tasks.map(x => x.id === id ? {...x, completed: !x.completed} : x))} onDelete={id => setTasks(tasks.filter(x => x.id !== id))} />)}
-                                                {tasks.length === 0 && <div className="py-20 text-center text-slate-400 opacity-20"><i data-lucide="list" class="w-20 h-20 mx-auto"></i></div>}
+                                <motion.div key="tasks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+                                        <div className="xl:col-span-4 space-y-6">
+                                            <div className="w-full bg-gradient-to-br from-indigo-600 to-sky-400 p-8 rounded-[2.5rem] text-white shadow-xl">
+                                                <h3 className="text-3xl font-black mb-1">{stats.completed} / {stats.total}</h3>
+                                                <p className="text-white/70 text-xs font-bold uppercase tracking-widest">Tasks Accomplished</p>
                                             </div>
                                         </div>
+                                        <div className="xl:col-span-8 space-y-2">
+                                            {tasks.map(t => <TaskItem key={t.id} task={t} onToggle={id => setTasks(tasks.map(x => x.id === id ? { ...x, completed: !x.completed } : x))} onDelete={id => setTasks(tasks.filter(x => x.id !== id))} />)}
+                                            {tasks.length === 0 && <div className="py-20 text-center text-slate-400 opacity-20"><i data-lucide="list" class="w-20 h-20 mx-auto"></i></div>}
+                                        </div>
+                                    </div>
                                 </motion.div>
                             </AnimatePresence>
                         </div>
@@ -178,13 +203,13 @@
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
                             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-t-[3rem] sm:rounded-[3rem] p-10 shadow-2xl">
                                 <h2 className="text-3xl font-black mb-8 dark:text-white">New Task</h2>
-                                <input autoFocus placeholder="Task name..." onKeyDown={e => { if(e.key === 'Enter' && e.target.value) { setTasks([...tasks, {id:Date.now(), title:e.target.value, completed:false, priority:'MEDIUM', category:'WORK'}]); setShowAdd(false); } }} className="w-full h-16 px-6 bg-slate-50 dark:bg-zinc-800 rounded-2xl outline-none mb-6 dark:text-white" />
+                                <input autoFocus placeholder="Task name..." onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { setTasks([...tasks, { id: Date.now(), title: e.target.value, completed: false, priority: 'MEDIUM', category: 'WORK' }]); setShowAdd(false); } }} className="w-full h-16 px-6 bg-slate-50 dark:bg-zinc-800 rounded-2xl outline-none mb-6 dark:text-white" />
                                 <button onClick={() => setShowAdd(false)} className="w-full h-16 font-bold text-slate-400">Cancel</button>
                             </motion.div>
                         </div>
                     )}</AnimatePresence>
 
-                    <AnimatePresence>{mobileMenu && <><motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenu(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 lg:hidden" /><motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-80 bg-white dark:bg-zinc-950 z-50 lg:hidden p-8 flex flex-col"><Sidebar activeTab={activeTab} setActiveTab={t => {setActiveTab(t); setMobileMenu(false);}} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={() => location.reload()} stats={stats} isMobile={true} /></motion.div></>}</AnimatePresence>
+                    <AnimatePresence>{mobileMenu && <><motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenu(false)} className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 lg:hidden" /><motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-80 bg-white dark:bg-zinc-950 z-50 lg:hidden p-8 flex flex-col"><Sidebar activeTab={activeTab} setActiveTab={t => { setActiveTab(t); setMobileMenu(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={() => location.reload()} stats={stats} isMobile={true} /></motion.div></>}</AnimatePresence>
                 </div>
             );
         }
@@ -193,4 +218,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>

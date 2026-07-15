@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { List, Layout, LogOut, Moon, Sun, CheckCircle2, ClipboardList } from 'lucide-react';
+import { LogOut, Moon, Sun, CheckCircle2, ClipboardList } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Sidebar({

@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, Moon, Sun, Trash2, ChevronDown, List, Menu, ClipboardList
+  Plus, Search, Moon, Sun, Trash2, List, Menu
 } from 'lucide-react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import WelcomeScreen from './components/WelcomeScreen';
@@ -41,12 +41,12 @@ export default function App() {
     }
   }, [toast]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setIsLoggedIn(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.reload();
-  };
+  }, [setIsLoggedIn]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -56,7 +56,7 @@ export default function App() {
         return;
       }
 
-      fetch('http://192.168.68.227:5000/api/tasks', {
+      fetch('http://192.168.1.15:5000/api/tasks', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
@@ -75,7 +75,7 @@ export default function App() {
           logout();
         });
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, logout]);
 
   // Derived State
   const filteredTasks = useMemo(() => {
@@ -109,7 +109,7 @@ export default function App() {
   const addTask = async (task) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://192.168.68.227:5000/api/tasks', {
+      const res = await fetch('http://192.168.1.15:5000/api/tasks', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function App() {
     const updatedTask = { ...task, completed: !task.completed };
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, {
+      const res = await fetch(`http://192.168.1.15:5000/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function App() {
   const deleteTask = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, { 
+      const res = await fetch(`http://192.168.1.15:5000/api/tasks/${id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -164,7 +164,7 @@ export default function App() {
   const editTask = async (updatedTask) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${updatedTask.id}`, {
+      const res = await fetch(`http://192.168.1.15:5000/api/tasks/${updatedTask.id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export default function App() {
     const completedTasks = tasks.filter(t => t.completed);
     try {
       const token = localStorage.getItem('token');
-      await Promise.all(completedTasks.map(t => fetch(`http://192.168.68.227:5000/api/tasks/${t.id}`, { 
+      await Promise.all(completedTasks.map(t => fetch(`http://192.168.1.15:5000/api/tasks/${t.id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })));
