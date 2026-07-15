@@ -88,7 +88,7 @@ app.post('/api/tasks', auth, async (req, res) => {
         if (users.length > 0) {
           const colId = users[0].id;
           validCollaboratorIds.push(colId);
-          await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "ACCEPTED")', [taskId, colId]);
+          await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "PENDING")', [taskId, colId]);
         }
       }
     }
@@ -152,7 +152,7 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
         if (users.length > 0) {
           const colId = users[0].id;
           validCollaboratorIds.push(colId);
-          await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "ACCEPTED")', [id, colId]);
+          await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "PENDING")', [id, colId]);
         }
       }
     }
@@ -208,10 +208,10 @@ app.post('/api/tasks/:id/invite', auth, async (req, res) => {
     }
     const userId = users[0].id;
 
-    // Insert auto-accepted request
-    await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "ACCEPTED")', [taskId, userId]);
+    // Insert pending request
+    await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "PENDING")', [taskId, userId]);
     
-    res.json({ message: 'Invitation auto-accepted and added.' });
+    res.json({ message: 'Invitation sent.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
