@@ -10,10 +10,14 @@ import ProgressDashboard from './components/ProgressDashboard';
 import TaskItem from './components/TaskItem';
 import AddTaskModal from './components/AddTaskModal';
 import Sidebar from './components/Sidebar';
+import RequestsView from './components/RequestsView';
+import SettingsView from './components/SettingsView';
 
 export default function App() {
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   // Persistence
   const [tasks, setTasks] = useState([]);
+  const [requests, setRequests] = useState([]);
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', systemPrefersDark);
   const [isLoggedIn, setIsLoggedIn] = useLocalStorage('loggedIn', false);
@@ -56,26 +60,52 @@ export default function App() {
         return;
       }
 
-      fetch('http://192.168.68.227:5000/api/tasks', {
+      fetch('http://192.168.68.227:5000/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-        .then(res => {
-          if (!res.ok) throw new Error('Unauthorized');
-          return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
-          if (Array.isArray(data)) {
-            setTasks(data);
-          } else {
-            setTasks([]);
+          if (data && data.theme) {
+            setIsDarkMode(data.theme === 'dark');
           }
         })
-        .catch(err => {
-          console.error('Failed to load tasks', err);
-          logout();
-        });
+        .catch(err => console.error('Failed to sync theme', err));
+
+      fetchTasksAndRequests(token);
     }
   }, [isLoggedIn, logout]);
+
+  const fetchTasksAndRequests = (token) => {
+    fetch('http://192.168.68.227:5000/api/tasks', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setTasks(data);
+        else setTasks([]);
+      })
+      .catch(err => {
+        console.error('Failed to load tasks', err);
+        logout();
+      });
+
+    fetch('http://192.168.68.227:5000/api/requests', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setRequests(data);
+        else setRequests([]);
+      })
+      .catch(err => console.error('Failed to load requests', err));
+  };
+
+  useEffect(() => {
+    if (isLoggedIn && activeTab === 'requests') {
+      const token = localStorage.getItem('token');
+      if (token) fetchTasksAndRequests(token);
+    }
+  }, [activeTab, isLoggedIn]);
 
   // Derived State
   const filteredTasks = useMemo(() => {
@@ -109,18 +139,43 @@ export default function App() {
   const addTask = async (task) => {
     try {
       const token = localStorage.getItem('token');
+
+      const payload = { ...task };
+      if (payload.collaborators && payload.collaborators.length > 0) {
+        payload.collaboratorEmails = payload.collaborators;
+      }
+      delete payload.collaborators;
+
       const res = await fetch('http://192.168.68.227:5000/api/tasks', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(task)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Failed to create task');
       const newTask = await res.json();
+
+      if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
+        await Promise.all(payload.collaboratorEmails.map(email => 
+          fetch(`http://192.168.68.227:5000/api/tasks/${newTask.id}/invite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ email })
+          })
+        ));
+      }
+
       setTasks([...tasks, newTask]);
-      showToast('Task created successfully ✨');
+      if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
+        showToast(`Task created & invite sent to ${payload.collaboratorEmails.join(', ')} 📩`);
+      } else {
+        showToast('Task created successfully ✨');
+      }
     } catch (e) {
       console.error(e);
       showToast('Error creating task ❌');
@@ -130,27 +185,33 @@ export default function App() {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
     const updatedTask = { ...task, completed: !task.completed };
+    
+    // Optimistic UI Update
+    setTasks(tasks.map(t => t.id === id ? updatedTask : t));
+    
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updatedTask)
       });
       if (!res.ok) throw new Error('Failed to update task');
-      setTasks(tasks.map(t => t.id === id ? updatedTask : t));
       showToast(updatedTask.completed ? 'Task completed 🎉' : 'Task unmarked ⏪');
     } catch (e) {
       console.error(e);
+      // Revert on failure
+      setTasks(tasks.map(t => t.id === id ? task : t));
+      showToast('Error: Backend blocked the update ❌');
     }
   };
   const deleteTask = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, { 
+      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -164,17 +225,42 @@ export default function App() {
   const editTask = async (updatedTask) => {
     try {
       const token = localStorage.getItem('token');
+
+      const payload = { ...updatedTask };
+      if (payload.collaborators && payload.collaborators.length > 0) {
+        payload.collaboratorEmails = payload.collaborators;
+      }
+      delete payload.collaborators;
+
       const res = await fetch(`http://192.168.68.227:5000/api/tasks/${updatedTask.id}`, {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updatedTask)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Failed to update task');
+
+      if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
+        await Promise.all(payload.collaboratorEmails.map(email => 
+          fetch(`http://192.168.68.227:5000/api/tasks/${updatedTask.id}/invite`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ email })
+          })
+        ));
+      }
+
       setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-      showToast('Task updated successfully 📝');
+      if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
+        showToast(`Task updated & invite sent to ${payload.collaboratorEmails.join(', ')} 📩`);
+      } else {
+        showToast('Task updated successfully 📝');
+      }
     } catch (e) {
       console.error(e);
     }
@@ -183,12 +269,50 @@ export default function App() {
     const completedTasks = tasks.filter(t => t.completed);
     try {
       const token = localStorage.getItem('token');
-      await Promise.all(completedTasks.map(t => fetch(`http://192.168.68.227:5000/api/tasks/${t.id}`, { 
+      await Promise.all(completedTasks.map(t => fetch(`http://192.168.68.227:5000/api/tasks/${t.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })));
       setTasks(tasks.filter(t => !t.completed));
       showToast('Completed tasks cleared 🧹');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRequest = async (req, status) => {
+    const taskId = req.task_id || req.taskId;
+    const creatorName = req.creator_name || 'Someone';
+
+    // Optimistic UI updates
+    setRequests(requests.filter(r => (r.task_id || r.taskId) !== taskId));
+    if (status === 'ACCEPTED') {
+      showToast(`Collaborated with ${creatorName} 🤝`);
+    } else {
+      showToast('Request declined 🗑️');
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://192.168.68.227:5000/api/requests/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) throw new Error('Failed to update request');
+
+      if (status === 'ACCEPTED') {
+        const tasksRes = await fetch('http://192.168.68.227:5000/api/tasks', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (tasksRes.ok) {
+          const data = await tasksRes.json();
+          if (Array.isArray(data)) setTasks(data);
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -202,7 +326,7 @@ export default function App() {
   return (
     <div className={isDarkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-slate-50 dark:bg-[#0c0c11] text-slate-900 dark:text-white transition-colors duration-300 flex overflow-x-hidden font-inter relative">
-        
+
         {/* Futuristic Ambient Glows - Dark Mode Only */}
         {isDarkMode && (
           <>
@@ -221,6 +345,7 @@ export default function App() {
           stats={stats}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
+          pendingCount={requests.length}
         />
 
         {/* Main Content Area */}
@@ -268,7 +393,7 @@ export default function App() {
                       </div>
                       <div className="space-y-1">
                         <AnimatePresence mode='popLayout'>
-                          {filteredTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} onEdit={setEditingTask} />)}
+                          {filteredTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} onEdit={setEditingTask} currentUser={currentUser} />)}
                           {filteredTasks.length === 0 && <div className="text-center py-20 text-slate-300"><List size={48} className="mx-auto mb-4 opacity-10" /><p className="font-bold text-lg">No tasks here!</p></div>}
                         </AnimatePresence>
                       </div>
@@ -276,12 +401,43 @@ export default function App() {
                   </div>
                 </motion.div>
               )}
+              {activeTab === 'requests' && (
+                <RequestsView
+                  key="requests"
+                  requests={requests}
+                  onAccept={(req) => handleRequest(req, 'ACCEPTED')}
+                  onDecline={(req) => handleRequest(req, 'DECLINED')}
+                />
+              )}
+              {activeTab === 'settings' && (
+                <SettingsView
+                  key="settings"
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                  onLogout={logout}
+                  showToast={showToast}
+                />
+              )}
             </AnimatePresence>
           </div>
         </main>
 
         {/* Floating Action Button */}
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowAddModal(true)} className="fixed bottom-8 right-8 lg:bottom-12 lg:right-12 w-16 h-16 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] text-white rounded-[1.5rem] flex items-center justify-center shadow-[0_0_25px_rgba(124,58,237,0.5)] z-40"><Plus size={32} /></motion.button>
+        <AnimatePresence>
+          {activeTab === 'tasks' && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAddModal(true)}
+              className="fixed bottom-8 right-8 lg:bottom-12 lg:right-12 w-16 h-16 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] text-white rounded-[1.5rem] flex items-center justify-center shadow-[0_0_25px_rgba(124,58,237,0.5)] z-40"
+            >
+              <Plus size={32} />
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* Modals */}
         <AnimatePresence>
@@ -295,7 +451,7 @@ export default function App() {
           {isMobileMenuOpen && (
             <>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" />
-              <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0c0c11] z-50 lg:hidden p-0"><Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsMobileMenuOpen(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={logout} stats={stats} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} /></motion.div>
+              <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0c0c11] z-50 lg:hidden p-0"><Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsMobileMenuOpen(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={logout} stats={stats} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} pendingCount={requests.length} /></motion.div>
             </>
           )}
         </AnimatePresence>

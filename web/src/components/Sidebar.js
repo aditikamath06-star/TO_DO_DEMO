@@ -1,20 +1,20 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, Moon, Sun, CheckCircle2, ClipboardList } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Inbox, Settings as SettingsIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Sidebar({
   activeTab,
   setActiveTab,
-  isDarkMode,
-  setIsDarkMode,
-  onLogout,
   stats,
   selectedCategory,
-  setSelectedCategory
+  setSelectedCategory,
+  pendingCount = 0
 }) {
   const tabs = [
-    { id: 'tasks', label: 'Tasks', icon: ClipboardList }
+    { id: 'tasks', label: 'Tasks', icon: ClipboardList },
+    { id: 'requests', label: 'Requests', icon: Inbox },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon }
   ];
 
   return (
@@ -41,8 +41,17 @@ export default function Sidebar({
                     : "text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-300 border border-transparent"
                 )}
               >
-                <Icon size={16} opacity={activeTab === tab.id ? 1 : 0.5} />
-                {tab.label}
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} opacity={activeTab === tab.id ? 1 : 0.5} />
+                    {tab.label}
+                  </div>
+                  {tab.id === 'requests' && pendingCount > 0 && (
+                    <span className="w-5 h-5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
+                      {pendingCount}
+                    </span>
+                  )}
+                </div>
               </button>
               
               {tab.id === 'tasks' && activeTab === 'tasks' && (
@@ -83,21 +92,6 @@ export default function Sidebar({
                 className="h-full bg-gradient-to-r from-[#7c3aed] to-[#3b82f6] shadow-[0_0_10px_rgba(124,58,237,0.5)]"
               />
            </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="flex-1 h-12 flex items-center justify-center bg-slate-50 dark:bg-black/20 text-slate-500 dark:text-slate-400 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-white transition-all border border-slate-100 dark:border-white/5 dark:backdrop-blur-md"
-          >
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-          <button
-            onClick={onLogout}
-            className="flex-1 h-12 flex items-center justify-center bg-red-50 dark:bg-[#ef4444]/10 text-red-500 dark:text-[#ef4444] rounded-2xl hover:bg-red-100 dark:hover:bg-[#ef4444]/20 hover:text-red-600 dark:hover:text-white transition-all border border-red-100 dark:border-[#ef4444]/20 dark:backdrop-blur-md"
-          >
-            <LogOut size={20} />
-          </button>
         </div>
       </div>
     </div>

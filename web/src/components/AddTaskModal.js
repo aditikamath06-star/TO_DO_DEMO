@@ -61,11 +61,11 @@ export default function AddTaskModal({ onClose, onSubmit, initialData }) {
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-600 dark:text-slate-400 flex items-center justify-between">
-              Collaborators (Emails)
+              Collaborators (Emails, comma separated)
               <span className="text-xs text-slate-400 font-normal">Optional</span>
             </label>
             <input
-              placeholder="e.g. friend@example.com, boss@company.com"
+              placeholder="e.g. aditi@gmail.com, john@doe.com"
               value={collaborators}
               onChange={(e) => setCollaborators(e.target.value)}
               className="w-full h-12 px-4 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl focus:border-slate-300 dark:focus:border-white/20 outline-none transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"

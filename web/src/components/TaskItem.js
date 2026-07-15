@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Check, Calendar, Edit2 } from 'lucide-react';
+import { Trash2, Check, Calendar, Edit2, Users } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const priorityColors = {
@@ -9,7 +9,7 @@ const priorityColors = {
   LOW: 'bg-green-500'
 };
 
-export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
+export default function TaskItem({ task, onToggle, onDelete, onEdit, currentUser }) {
   let localDueDate = null;
   let formattedDate = '';
   if (task.dueDate) {
@@ -76,6 +76,22 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
             {task.category}
           </span>
 
+          {/* Collaborator Initials Chip */}
+          {(task.collaboratorEmails || task.collaborators) && (task.collaboratorEmails || task.collaborators).length > 0 && (
+            <div className="flex items-center -space-x-1" title={(task.collaboratorEmails || task.collaborators).join(', ')}>
+              {(task.collaboratorEmails || task.collaborators).slice(0, 3).map((email, i) => (
+                <div key={i} className="w-5 h-5 rounded-full bg-[#7c3aed] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-zinc-900 shadow-sm z-10" style={{ zIndex: 10 - i }}>
+                  {String(email).charAt(0).toUpperCase()}
+                </div>
+              ))}
+              {(task.collaboratorEmails || task.collaborators).length > 3 && (
+                <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center text-[8px] font-bold border border-white dark:border-zinc-900 shadow-sm z-0">
+                  +{(task.collaboratorEmails || task.collaborators).length - 3}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Date Chip */}
           {task.dueDate && (
             <div className={clsx(
@@ -87,21 +103,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
             </div>
           )}
 
-          {/* Collaborators Chip */}
-          {task.collaborators && task.collaborators.length > 0 && (
-            <div className="flex items-center -space-x-1 ml-1" title={task.collaborators.join(', ')}>
-              {task.collaborators.slice(0, 3).map((email, i) => (
-                <div key={i} className="w-5 h-5 rounded-full bg-[#7c3aed] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-zinc-900 shadow-sm z-10" style={{ zIndex: 10 - i }}>
-                  {email.charAt(0).toUpperCase()}
-                </div>
-              ))}
-              {task.collaborators.length > 3 && (
-                <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center text-[8px] font-bold border border-white dark:border-zinc-900 shadow-sm z-0">
-                  +{task.collaborators.length - 3}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Old Collab Chip replaced */}
         </div>
       </div>
 
@@ -113,12 +115,14 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit }) {
         >
           <Edit2 size={18} />
         </button>
-        <button
-          onClick={() => onDelete(task.id)}
-          className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-        >
-          <Trash2 size={18} />
-        </button>
+        {(!task.user_id || !currentUser?.id || task.user_id == currentUser.id) && (
+          <button
+            onClick={() => onDelete(task.id)}
+            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
       </div>
     </motion.div>
   );
