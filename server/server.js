@@ -10,7 +10,8 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
 app.use('/api/auth', authRouter);
@@ -41,6 +42,57 @@ app.get('/api/tasks', auth, async (req, res) => {
       WHERE t.user_id = ? OR (tc.user_id = ? AND tc.status = 'ACCEPTED')
     `;
     const [rows] = await pool.execute(sql, [req.user.id, req.user.id]);
+    
+    // Also fetch ALL accepted collaborators for each task
+    for (let task of rows) {
+      const [collabs] = await pool.execute(`
+        SELECT u.email 
+        FROM task_collaborators tc 
+        JOIN users u ON tc.user_id = u.id 
+        WHERE tc.task_id = ? AND tc.status = "ACCEPTED"
+      `, [task.id]);
+      task.collaboratorEmails = collabs.map(c => c.email);
+    }
+    
+    res.json(rows.map(mapTask));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// 1.5. Search tasks for the logged in user
+app.get('/api/tasks/search', auth, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.json([]);
+    }
+    
+    // Extract keywords (split by space, filter empty)
+    const keywords = q.split(' ').filter(k => k.trim().length > 0);
+    if (keywords.length === 0) {
+      return res.json([]);
+    }
+
+    let baseSql = `
+      SELECT DISTINCT t.* 
+      FROM tasks t 
+      LEFT JOIN task_collaborators tc ON t.id = tc.task_id 
+      WHERE (t.user_id = ? OR (tc.user_id = ? AND tc.status = 'ACCEPTED'))
+    `;
+    let params = [req.user.id, req.user.id];
+
+    // Build the OR conditions for keywords
+    let keywordConditions = [];
+    for (let kw of keywords) {
+      keywordConditions.push('(t.title LIKE ? OR t.description LIKE ?)');
+      params.push(`%${kw}%`, `%${kw}%`);
+    }
+
+    if (keywordConditions.length > 0) {
+      baseSql += ' AND (' + keywordConditions.join(' OR ') + ')';
+    }
+
+    const [rows] = await pool.execute(baseSql, params);
     
     // Also fetch ALL accepted collaborators for each task
     for (let task of rows) {

@@ -14,7 +14,7 @@ import RequestsView from './components/RequestsView';
 import SettingsView from './components/SettingsView';
 
 export default function App() {
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
   // Persistence
   const [tasks, setTasks] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -53,6 +53,7 @@ export default function App() {
   }, [setIsLoggedIn]);
 
   useEffect(() => {
+    let intervalId;
     if (isLoggedIn) {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -60,19 +61,35 @@ export default function App() {
         return;
       }
 
-      fetch('http://192.168.68.227:5000/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.theme) {
-            setIsDarkMode(data.theme === 'dark');
-          }
+      const syncUser = () => {
+        fetch('http://192.168.68.227:5000/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
         })
-        .catch(err => console.error('Failed to sync theme', err));
+          .then(res => {
+            if (!res.ok) {
+               if (res.status === 401) logout();
+               throw new Error('Unauthorized');
+            }
+            return res.json();
+          })
+          .then(data => {
+            if (data && data.username) {
+              if (data.theme) setIsDarkMode(data.theme === 'dark');
+              setCurrentUser(data);
+              localStorage.setItem('user', JSON.stringify(data));
+            }
+          })
+          .catch(err => console.error('Failed to sync user data', err));
+      };
+
+      syncUser();
+      intervalId = setInterval(syncUser, 10000); // Poll every 10s to sync across devices
 
       fetchTasksAndRequests(token);
     }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [isLoggedIn, logout]);
 
   const fetchTasksAndRequests = (token) => {
@@ -346,6 +363,7 @@ export default function App() {
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
           pendingCount={requests.length}
+          user={currentUser}
         />
 
         {/* Main Content Area */}
@@ -416,6 +434,7 @@ export default function App() {
                   setIsDarkMode={setIsDarkMode}
                   onLogout={logout}
                   showToast={showToast}
+                  onUserUpdated={(newUser) => setCurrentUser(newUser)}
                 />
               )}
             </AnimatePresence>

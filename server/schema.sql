@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(100) NOT NULL UNIQUE,
   password_hash VARCHAR(255),
   theme VARCHAR(20) DEFAULT 'light',
+  profilePic LONGTEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
-    res.status(201).json({ token, user: { id: result.insertId, username, email } });
+    res.status(201).json({ token, user: { id: result.insertId, username, email, profilePic: null, theme: 'light' } });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -82,7 +82,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
-    res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
+    res.json({ token, user: { id: user.id, username: user.username, email: user.email, profilePic: user.profilePic, theme: user.theme } });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
 // Get user profile
 router.get('/me', auth, async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT id, username, email, theme FROM users WHERE id = ?', [req.user.id]);
+    const [rows] = await pool.execute('SELECT id, username, email, theme, profilePic FROM users WHERE id = ?', [req.user.id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -104,11 +104,16 @@ router.get('/me', auth, async (req, res) => {
 
 // Update user profile
 router.put('/me', auth, async (req, res) => {
-  const { username, email, password, theme } = req.body;
+  const { username, email, password, theme, profilePic } = req.body;
   
   try {
     let sql = 'UPDATE users SET username = ?, email = ?, theme = ?';
     let params = [username, email, theme || 'light'];
+
+    if (profilePic !== undefined) {
+      sql += ', profilePic = ?';
+      params.push(profilePic);
+    }
 
     if (password) {
       const salt = await bcrypt.genSalt(10);

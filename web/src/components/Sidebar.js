@@ -9,7 +9,8 @@ export default function Sidebar({
   stats,
   selectedCategory,
   setSelectedCategory,
-  pendingCount = 0
+  pendingCount = 0,
+  user
 }) {
   const tabs = [
     { id: 'tasks', label: 'Tasks', icon: ClipboardList },
@@ -19,11 +20,27 @@ export default function Sidebar({
 
   return (
     <div className="hidden lg:flex flex-col w-64 h-screen fixed left-0 top-0 bg-white dark:bg-[#13131a] border-r border-slate-100 dark:border-white/5 p-4 z-30 shadow-2xl">
-      <div className="flex items-center gap-3 mb-8 px-2 mt-2">
+      <div className="flex items-center gap-3 mb-6 px-2 mt-2">
         <div className="w-8 h-8 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]">
           <CheckCircle2 size={18} />
         </div>
         <h1 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">ToDoList</h1>
+      </div>
+
+      <div className="flex items-center gap-3 mb-8 px-2">
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-zinc-800 flex items-center justify-center border border-slate-200 dark:border-white/10">
+          {user.profilePic ? (
+            <img src={user.profilePic} alt="Profile" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-[#7c3aed] text-white flex items-center justify-center font-bold text-sm">
+              {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+            </div>
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-800 dark:text-white">{user.username || 'User'}</p>
+          <p className="text-[10px] text-slate-500 truncate w-32">{user.email || ''}</p>
+        </div>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Save, Moon, Sun, LogOut, Settings as SettingsIcon, Edit2, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Save, Moon, Sun, LogOut, Settings as SettingsIcon, Edit2, AlertCircle, Camera } from 'lucide-react';
 
-export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast }) {
+export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, onUserUpdated }) {
   const [user, setUser] = useState(() => {
     const saved = JSON.parse(localStorage.getItem('user') || '{}');
-    return { username: saved.username || '', email: saved.email || '' };
+    return { username: saved.username || '', email: saved.email || '', profilePic: saved.profilePic || '' };
   });
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,10 +26,25 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       });
       if (res.ok) {
         const data = await res.json();
-        setUser({ username: data.username, email: data.email });
+        setUser({ username: data.username, email: data.email, profilePic: data.profilePic || '' });
+        const saved = JSON.parse(localStorage.getItem('user') || '{}');
+        const newData = { ...saved, ...data };
+        localStorage.setItem('user', JSON.stringify(newData));
+        if (onUserUpdated) onUserUpdated(newData);
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUser({ ...user, profilePic: reader.result });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -47,7 +62,8 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       const body = { 
         username: user.username, 
         email: user.email,
-        theme: isDarkMode ? 'dark' : 'light'
+        theme: isDarkMode ? 'dark' : 'light',
+        profilePic: user.profilePic
       };
       if (password) body.password = password;
 
@@ -65,6 +81,11 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
         setIsSaving(false);
         return;
       }
+      
+      const saved = JSON.parse(localStorage.getItem('user') || '{}');
+      const newData = { ...saved, username: user.username, email: user.email, profilePic: user.profilePic };
+      localStorage.setItem('user', JSON.stringify(newData));
+      if (onUserUpdated) onUserUpdated(newData);
       
       setPassword('');
       setIsEditing(false);
@@ -133,6 +154,24 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
           </div>
           
           <form onSubmit={handleSaveInit} className="space-y-5">
+            <div className="flex justify-center mb-6">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#7c3aed] shadow-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                  {user.profilePic ? (
+                    <img src={user.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={40} className="text-slate-400" />
+                  )}
+                </div>
+                {isEditing && (
+                  <label className="absolute bottom-0 right-0 w-8 h-8 bg-[#7c3aed] rounded-full flex items-center justify-center text-white cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                    <Camera size={14} />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  </label>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Username</label>
               <div className="relative">
