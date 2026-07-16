@@ -20,19 +20,6 @@ export default function Sidebar({
 
   return (
     <div className="hidden lg:flex flex-col w-64 h-screen fixed left-0 top-0 bg-white dark:bg-[#13131a] border-r border-slate-100 dark:border-white/5 p-4 z-30 shadow-2xl">
-      <div className="flex items-center gap-3 mb-6 px-2 mt-2">
-        <div className="w-8 h-8 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]">
-          <CheckCircle2 size={18} />
-        </div>
-        <div className={clsx("flex-1 min-w-0 transition-opacity duration-300", !isSidebarExpanded && "lg:opacity-0 lg:w-0 lg:overflow-hidden")}>
-          <p className="font-bold text-sm text-slate-800 dark:text-white truncate hover:text-[#7c3aed] transition-colors">
-            {currentUser?.username || 'My Profile'}
-          </p>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-            {currentUser?.email || 'Manage account'}
-          </p>
-        </div>
-      </button>
 
       <div className="flex items-center gap-3 mb-8 px-2">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-zinc-800 flex items-center justify-center border border-slate-200 dark:border-white/10">
