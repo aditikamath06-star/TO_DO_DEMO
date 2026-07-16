@@ -136,7 +136,6 @@ export default function Sidebar({
           <h1 className={clsx("text-xs font-black text-slate-800 dark:text-white tracking-tight transition-opacity duration-300 whitespace-nowrap", !isSidebarExpanded && "lg:opacity-0 lg:hidden")}>ToDoList</h1>
         </div>
       </div>
-      </div>
     </div>
   );
 }
