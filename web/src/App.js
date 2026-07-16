@@ -105,7 +105,7 @@ export default function App() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, logout]);
+  }, [isLoggedIn, logout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTasksAndRequests = (token) => {
     fetch('http://192.168.68.227:5000/api/tasks', {
@@ -137,7 +137,7 @@ export default function App() {
       const token = localStorage.getItem('token');
       if (token) fetchTasksAndRequests(token);
     }
-  }, [activeTab, isLoggedIn]);
+  }, [activeTab, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived State
   const filteredTasks = useMemo(() => {
@@ -171,7 +171,7 @@ export default function App() {
       result.sort((a, b) => pMap[b.priority] - pMap[a.priority]);
     }
     return result;
-  }, [tasks, searchQuery, selectedCategory, sortBy]);
+  }, [tasks, searchQuery, selectedCategory, sortBy, searchResults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => {
     const completed = tasks.filter(t => t.completed).length;

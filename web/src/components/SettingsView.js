@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Save, Moon, Sun, LogOut, Settings as SettingsIcon, Edit2, AlertCircle, Camera, Trash2 } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Save, Settings as SettingsIcon, Edit2, AlertCircle, Camera, Trash2 } from 'lucide-react';
 
 export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, avatarUrl, setAvatarUrl, onUserUpdated }) {
   const [user, setUser] = useState(() => {
@@ -12,8 +12,6 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
   const handleAvatarUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -147,28 +145,6 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     setIsSaving(false);
   };
 
-  const handleThemeChange = async () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    
-    try {
-      const token = localStorage.getItem('token');
-      await fetch('http://192.168.68.227:5000/api/auth/me', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          username: user.username, 
-          email: user.email, 
-          theme: newTheme ? 'dark' : 'light' 
-        })
-      });
-    } catch (e) {
-      console.error("Failed to sync theme", e);
-    }
-  };
 
   return (
     <motion.div
