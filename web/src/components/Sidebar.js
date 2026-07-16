@@ -9,7 +9,8 @@ export default function Sidebar({
   stats,
   selectedCategory,
   setSelectedCategory,
-  pendingCount = 0
+  pendingCount = 0,
+  className = ""
 }) {
   const tabs = [
     { id: 'tasks', label: 'Tasks', icon: ClipboardList },
@@ -18,7 +19,7 @@ export default function Sidebar({
   ];
 
   return (
-    <div className="hidden lg:flex flex-col w-64 h-screen fixed left-0 top-0 bg-white dark:bg-[#13131a] border-r border-slate-100 dark:border-white/5 p-4 z-30 shadow-2xl">
+    <div className={clsx("flex flex-col bg-white dark:bg-[#13131a] border-r border-slate-100 dark:border-white/5 p-4 shadow-2xl z-30", className || "hidden lg:flex w-64 h-screen fixed left-0 top-0")}>
       <div className="flex items-center gap-3 mb-8 px-2 mt-2">
         <div className="w-8 h-8 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] rounded-xl flex items-center justify-center text-white shadow-[0_0_15px_rgba(124,58,237,0.4)]">
           <CheckCircle2 size={18} />
