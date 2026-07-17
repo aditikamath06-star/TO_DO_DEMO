@@ -124,7 +124,7 @@ app.get('/api/tasks/search', auth, async (req, res) => {
 app.post('/api/tasks', auth, async (req, res) => {
   const { title, description, priority, category, dueDate, completed, createdAt, collaboratorEmails } = req.body;
   const sql = `
-    INSERT INTO tasks (user_id, title, description, priority, category, dueDate, completed, createdAt)
+    INSERT INTO tasks (user_id, title, description, priority, category, "dueDate", completed, "createdAt")
     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
   `;
   const params = [
@@ -199,7 +199,7 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
 
     const sql = `
       UPDATE tasks 
-      SET title = ?, description = ?, priority = ?, category = ?, dueDate = ?, completed = ?, createdAt = ?
+      SET title = ?, description = ?, priority = ?, category = ?, "dueDate" = ?, completed = ?, "createdAt" = ?
       WHERE id = ?
     `;
     const params = [title, description, priority, category, dueDate, completed, createdAt, id];
