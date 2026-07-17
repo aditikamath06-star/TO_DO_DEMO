@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Moon, Sun, Trash2, List, Menu, LogOut
 } from 'lucide-react';
-import { clsx } from 'clsx';
+
 import { useLocalStorage } from './hooks/useLocalStorage';
 import WelcomeScreen from './components/WelcomeScreen';
 import LoginScreen from './components/LoginScreen';
@@ -20,11 +20,11 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('userAvatar'));
+  const [avatarUrl] = useState(() => localStorage.getItem('userAvatar'));
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', systemPrefersDark);
   const [isLoggedIn, setIsLoggedIn] = useLocalStorage('loggedIn', false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
 
   const [showWelcome, setShowWelcome] = useState(!isLoggedIn);
   const [activeTab, setActiveTab] = useLocalStorage('activeTab', 'tasks');

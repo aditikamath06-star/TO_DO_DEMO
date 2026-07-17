@@ -17,7 +17,7 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
     
     try {
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password
         });
@@ -30,7 +30,7 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
         // Supabase saves the token to local storage automatically
         onLoginSuccess();
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password
         });

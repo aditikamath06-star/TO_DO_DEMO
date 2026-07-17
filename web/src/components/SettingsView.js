@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, LogOut, Check, X, Moon, Sun, Camera, Shield, Mail, User, Eye, EyeOff, Save, Edit2, AlertCircle, Trash2, Lock } from 'lucide-react';
+import { Settings as SettingsIcon, Camera, Mail, User, Eye, EyeOff, Save, Edit2, AlertCircle, Trash2, Lock } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, onUserUpdated, user: currentUserProp }) {
@@ -94,6 +94,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
 
   useEffect(() => {
     fetchUserData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserData = async () => {
@@ -184,6 +185,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     setIsSaving(false);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleThemeChange = async () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
