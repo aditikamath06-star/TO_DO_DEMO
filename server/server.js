@@ -149,7 +149,7 @@ app.post('/api/tasks', auth, async (req, res) => {
         if (users.length > 0) {
           const colId = users[0].id;
           validCollaboratorEmails.push(email);
-          await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \\'PENDING\\') ON CONFLICT (task_id, user_id) DO NOTHING', [taskId, colId]);
+          await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \'PENDING\') ON CONFLICT (task_id, user_id) DO NOTHING', [taskId, colId]);
         }
       }
     }
@@ -213,7 +213,7 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
         if (users.length > 0) {
           const colId = users[0].id;
           validCollaboratorEmails.push(email);
-          await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \\'PENDING\\') ON CONFLICT (task_id, user_id) DO NOTHING', [id, colId]);
+          await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \'PENDING\') ON CONFLICT (task_id, user_id) DO NOTHING', [id, colId]);
         }
       }
     }
@@ -270,7 +270,7 @@ app.post('/api/tasks/:id/invite', auth, async (req, res) => {
     const userId = users[0].id;
 
     // Insert pending request
-    await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \\'PENDING\\') ON CONFLICT (task_id, user_id) DO NOTHING', [taskId, userId]);
+    await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \'PENDING\') ON CONFLICT (task_id, user_id) DO NOTHING', [taskId, userId]);
     
     res.json({ message: 'Invitation sent.' });
   } catch (err) {
