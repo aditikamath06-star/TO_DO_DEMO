@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, Moon, Sun, Trash2, List, Menu
+  Plus, Search, Moon, Sun, Trash2, List, Menu, LogOut
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -27,7 +27,7 @@ export default function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const [showWelcome, setShowWelcome] = useState(!isLoggedIn);
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useLocalStorage('activeTab', 'tasks');
 
   // App State
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,6 +39,7 @@ export default function App() {
   const [editingTask, setEditingTask] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const showToast = (message) => {
     setToast({ message, id: Date.now() });
@@ -57,6 +58,7 @@ export default function App() {
     setSession(null);
     localStorage.removeItem('user');
     localStorage.removeItem('userAvatar');
+    localStorage.removeItem('token');
     window.location.reload();
   }, [setIsLoggedIn]);
 
@@ -68,79 +70,83 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) setIsLoggedIn(true);
-      else setIsLoggedIn(false);
+      if (session) {
+        setIsLoggedIn(true);
+        localStorage.setItem('token', session.access_token);
+      } else {
+        setIsLoggedIn(false);
+        localStorage.removeItem('token');
+      }
     });
 
     return () => subscription.unsubscribe();
   }, [setIsLoggedIn]);
 
+  const fetchTasksAndRequests = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const tasksRes = await fetch('https://todolist-6xt3.onrender.com/api/tasks', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (tasksRes.ok) {
+        const data = await tasksRes.json();
+        setTasks(Array.isArray(data) ? data : []);
+      } else {
+        if (tasksRes.status === 401) logout();
+      }
+
+      const reqRes = await fetch('https://todolist-6xt3.onrender.com/api/requests', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (reqRes.ok) {
+        const data = await reqRes.json();
+        setRequests(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to load tasks and requests', err);
+    }
+  };
+
   useEffect(() => {
     let intervalId;
     if (isLoggedIn && session) {
-      const token = session.access_token;
-
-
-      const syncUser = () => {
-        fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-          .then(res => {
-            if (!res.ok) {
-               if (res.status === 401) logout();
-               throw new Error('Unauthorized');
-            }
-            return res.json();
-          })
-          .then(data => {
+      const syncUser = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) return;
+          const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
             if (data && data.username) {
               if (data.theme) setIsDarkMode(data.theme === 'dark');
-              setCurrentUser(data);
-              localStorage.setItem('user', JSON.stringify(data));
+              setCurrentUser(prev => ({ ...data, profilePic: data.profilePic || prev?.profilePic }));
+              const currentPic = JSON.parse(localStorage.getItem('user') || '{}').profilePic;
+              localStorage.setItem('user', JSON.stringify({ ...data, profilePic: data.profilePic || currentPic }));
             }
-          })
-          .catch(err => console.error('Failed to sync user data', err));
+          } else if (res.status === 401) {
+            logout();
+          }
+        } catch (err) {
+          console.error('Failed to sync user data', err);
+        }
       };
 
       syncUser();
-      intervalId = setInterval(syncUser, 10000); // Poll every 10s to sync across devices
-
-      fetchTasksAndRequests(token);
+      intervalId = setInterval(syncUser, 10000);
+      fetchTasksAndRequests();
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, logout]);
-
-  const fetchTasksAndRequests = (token) => {
-    fetch('https://todolist-6xt3.onrender.com/api/tasks', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setTasks(data);
-        else setTasks([]);
-      })
-      .catch(err => {
-        console.error('Failed to load tasks', err);
-        logout();
-      });
-
-    fetch('https://todolist-6xt3.onrender.com/api/requests', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setRequests(data);
-        else setRequests([]);
-      })
-      .catch(err => console.error('Failed to load requests', err));
-  };
+  }, [isLoggedIn, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isLoggedIn && activeTab === 'requests') {
-      const token = localStorage.getItem('token');
-      if (token) fetchTasksAndRequests(token);
+      fetchTasksAndRequests();
     }
   }, [activeTab, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -186,6 +192,7 @@ export default function App() {
   const addTask = async (task) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
 
       const payload = { ...task };
       if (payload.collaborators && payload.collaborators.length > 0) {
@@ -201,25 +208,26 @@ export default function App() {
         },
         body: JSON.stringify(payload)
       });
+
       if (!res.ok) throw new Error('Failed to create task');
       const newTask = await res.json();
-
-      if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
-        await Promise.all(payload.collaboratorEmails.map(email => 
-          fetch(`https://todolist-6xt3.onrender.com/api/tasks/${newTask.id}/invite`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ email })
-          })
-        ));
-      }
-
+      
       setTasks([...tasks, newTask]);
+
       if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
         showToast(`Task created & invite sent to ${payload.collaboratorEmails.join(', ')} 📩`);
+        
+        // Note: In the new backend, invitations are handled via a separate endpoint if needed,
+        // or handled entirely by the POST /api/tasks backend endpoint if it was implemented.
+        // The github backend has a separate /api/tasks/:id/invite endpoint, so we should call it.
+        await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${newTask.id}/invite`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ emails: payload.collaboratorEmails })
+        });
       } else {
         showToast('Task created successfully ✨');
       }
@@ -238,13 +246,14 @@ export default function App() {
     
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updatedTask)
+        body: JSON.stringify({ completed: updatedTask.completed })
       });
       if (!res.ok) throw new Error('Failed to update task');
       showToast(updatedTask.completed ? 'Task completed 🎉' : 'Task unmarked ⏪');
@@ -252,12 +261,13 @@ export default function App() {
       console.error(e);
       // Revert on failure
       setTasks(tasks.map(t => t.id === id ? task : t));
-      showToast('Error: Backend blocked the update ❌');
+      showToast('Error updating task ❌');
     }
   };
   const deleteTask = async (id) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -272,6 +282,7 @@ export default function App() {
   const editTask = async (updatedTask) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
 
       const payload = { ...updatedTask };
       if (payload.collaborators && payload.collaborators.length > 0) {
@@ -289,33 +300,32 @@ export default function App() {
       });
       if (!res.ok) throw new Error('Failed to update task');
 
-      if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
-        await Promise.all(payload.collaboratorEmails.map(email => 
-          fetch(`https://todolist-6xt3.onrender.com/api/tasks/${updatedTask.id}/invite`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ email })
-          })
-        ));
-      }
-
       setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+
       if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
         showToast(`Task updated & invite sent to ${payload.collaboratorEmails.join(', ')} 📩`);
+        
+        await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${updatedTask.id}/invite`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ emails: payload.collaboratorEmails })
+        });
       } else {
         showToast('Task updated successfully 📝');
       }
     } catch (e) {
       console.error(e);
+      showToast('Error updating task ❌');
     }
   };
   const clearCompleted = async () => {
     const completedTasks = tasks.filter(t => t.completed);
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
       await Promise.all(completedTasks.map(t => fetch(`https://todolist-6xt3.onrender.com/api/tasks/${t.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -341,6 +351,7 @@ export default function App() {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
       const res = await fetch(`https://todolist-6xt3.onrender.com/api/requests/${taskId}`, {
         method: 'PUT',
         headers: {
@@ -357,7 +368,7 @@ export default function App() {
         });
         if (tasksRes.ok) {
           const data = await tasksRes.json();
-          if (Array.isArray(data)) setTasks(data);
+          setTasks(Array.isArray(data) ? data : []);
         }
       }
     } catch (e) {
@@ -388,7 +399,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
-          onLogout={logout}
+          onLogout={() => setShowLogoutConfirm(true)}
           stats={stats}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
@@ -397,8 +408,8 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <main className={clsx("flex-1 min-h-screen transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]", isSidebarExpanded ? "lg:ml-[300px]" : "lg:ml-[128px]")}>
-          <div className="max-w-7xl w-full px-6 lg:px-8 py-8 pb-32">
+        <main className="flex-1 min-h-[calc(100vh-2rem)] my-4 mr-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] lg:ml-[112px] peer-hover:lg:ml-[288px] bg-white dark:bg-[#13131a] rounded-3xl shadow-2xl border border-slate-100 dark:border-white/5 overflow-y-auto relative">
+          <div className="max-w-7xl w-full px-6 lg:px-8 py-8 pb-32 min-h-full">
 
             {/* Header (Mobile) */}
             <header className="lg:hidden flex items-center justify-between mb-8 relative z-10">
@@ -503,9 +514,10 @@ export default function App() {
                   key="settings"
                   isDarkMode={isDarkMode}
                   setIsDarkMode={setIsDarkMode}
-                  onLogout={logout}
+                  onLogout={() => setShowLogoutConfirm(true)}
                   showToast={showToast}
                   onUserUpdated={(newUser) => setCurrentUser(newUser)}
+                  user={currentUser}
                 />
               )}
             </AnimatePresence>
@@ -538,10 +550,50 @@ export default function App() {
               onSubmit={editingTask ? editTask : addTask}
             />
           )}
+          {showLogoutConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                onClick={() => setShowLogoutConfirm(false)} 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+                animate={{ scale: 1, opacity: 1, y: 0 }} 
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="relative bg-white dark:bg-[#13131a] p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-slate-100 dark:border-white/5 text-center"
+              >
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <LogOut size={28} strokeWidth={2.5} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-2">Sign Out?</h2>
+                <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">Are you sure you want to log out of your account?</p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setShowLogoutConfirm(false)}
+                    className="flex-1 py-3 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowLogoutConfirm(false);
+                      logout();
+                    }}
+                    className="flex-1 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg shadow-red-500/25 transition-all hover:scale-105 active:scale-95"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
           {isMobileMenuOpen && (
             <>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" />
-              <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0c0c11] z-50 lg:hidden p-0"><Sidebar className="w-full h-full" activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsMobileMenuOpen(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={logout} stats={stats} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} pendingCount={requests.length} currentUser={currentUser} avatarUrl={avatarUrl} /></motion.div>
+              <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0c0c11] z-50 lg:hidden p-0"><Sidebar className="w-full h-full" activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsMobileMenuOpen(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={() => setShowLogoutConfirm(true)} stats={stats} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} pendingCount={requests.length} currentUser={currentUser} avatarUrl={avatarUrl} /></motion.div>
             </>
           )}
         </AnimatePresence>

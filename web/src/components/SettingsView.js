@@ -1,13 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, LogOut, Check, X, Moon, Sun, Camera, Shield, Mail, User, Eye, EyeOff, Save, Edit2, AlertCircle } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Check, X, Moon, Sun, Camera, Shield, Mail, User, Eye, EyeOff, Save, Edit2, AlertCircle, Trash2, Lock } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, onUserUpdated }) {
+export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, onUserUpdated, user: currentUserProp }) {
   const [user, setUser] = useState(() => {
     const saved = JSON.parse(localStorage.getItem('user') || '{}');
-    return { username: saved.username || '', email: saved.email || '', profilePic: saved.profilePic || '' };
+    return { 
+      username: currentUserProp?.username || saved.username || '', 
+      email: currentUserProp?.email || saved.email || '', 
+      profilePic: currentUserProp?.profilePic || saved.profilePic || '' 
+    };
   });
+  
+  useEffect(() => {
+    if (currentUserProp) {
+      setUser(prev => ({
+        ...prev,
+        username: currentUserProp.username || prev.username,
+        email: currentUserProp.email || prev.email,
+        profilePic: currentUserProp.profilePic !== undefined ? currentUserProp.profilePic : prev.profilePic
+      }));
+    }
+  }, [currentUserProp]);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -19,8 +34,14 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Str = reader.result;
-        setAvatarUrl(base64Str);
+        setUser(prev => ({ ...prev, profilePic: base64Str }));
         localStorage.setItem('userAvatar', base64Str);
+        
+        // Optimistic update for the sidebar
+        const saved = JSON.parse(localStorage.getItem('user') || '{}');
+        const newData = { ...saved, profilePic: base64Str };
+        localStorage.setItem('user', JSON.stringify(newData));
+        if (onUserUpdated) onUserUpdated(newData);
         
         try {
           const token = localStorage.getItem('token');
@@ -32,10 +53,6 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
           });
           
           if (res.ok) {
-             const saved = JSON.parse(localStorage.getItem('user') || '{}');
-             const newData = { ...saved, ...body };
-             localStorage.setItem('user', JSON.stringify(newData));
-             if (onUserUpdated) onUserUpdated(newData);
              showToast('Profile picture saved to cloud! ☁️');
           } else {
              showToast('Failed to sync picture to cloud ❌');
@@ -49,9 +66,15 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
   };
 
   const handleRemoveAvatar = async () => {
-    setAvatarUrl(null);
+    setUser(prev => ({ ...prev, profilePic: '' }));
     localStorage.removeItem('userAvatar');
     
+    // Optimistic update for sidebar
+    const saved = JSON.parse(localStorage.getItem('user') || '{}');
+    const newData = { ...saved, profilePic: '' };
+    localStorage.setItem('user', JSON.stringify(newData));
+    if (onUserUpdated) onUserUpdated(newData);
+
     try {
       const token = localStorage.getItem('token');
       const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: '' };
@@ -62,10 +85,6 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       });
       
       if (res.ok) {
-         const saved = JSON.parse(localStorage.getItem('user') || '{}');
-         const newData = { ...saved, ...body };
-         localStorage.setItem('user', JSON.stringify(newData));
-         if (onUserUpdated) onUserUpdated(newData);
          showToast('Profile picture removed! 🗑️');
       }
     } catch (err) {
@@ -101,7 +120,14 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setUser({ ...user, profilePic: reader.result });
+        const base64Str = reader.result;
+        setUser({ ...user, profilePic: base64Str });
+        
+        // Optimistic update for sidebar
+        const saved = JSON.parse(localStorage.getItem('user') || '{}');
+        const newData = { ...saved, profilePic: base64Str };
+        localStorage.setItem('user', JSON.stringify(newData));
+        if (onUserUpdated) onUserUpdated(newData);
       };
       reader.readAsDataURL(file);
     }
@@ -204,11 +230,13 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
           <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] rounded-full blur-[60px] opacity-20 pointer-events-none" />
           <div className="absolute bottom-[-50px] left-[-50px] w-40 h-40 bg-gradient-to-br from-[#7c3aed] to-blue-500 rounded-full blur-[60px] opacity-10 pointer-events-none" />
           
-          <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] shadow-2xl flex items-center justify-center text-white text-5xl font-black mb-6 border-4 border-white dark:border-zinc-800 relative z-10 overflow-hidden">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] shadow-2xl flex items-center justify-center text-white text-5xl font-black mb-6 border-4 border-white dark:border-zinc-800 relative z-10 overflow-hidden">
+            {user.profilePic ? (
+              <img src={user.profilePic} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              user.username ? user.username.charAt(0).toUpperCase() : 'U'
+              <div className="w-full h-full bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] flex items-center justify-center">
+                {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+              </div>
             )}
           </div>
           
@@ -231,9 +259,9 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
                 <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                 <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                 <Camera size={14} className="mr-1.5 relative z-10" />
-                <p className="font-bold text-[11px] relative z-10">{avatarUrl ? 'Change' : 'Upload'}</p>
+                <p className="font-bold text-[11px] relative z-10">{user.profilePic ? 'Change' : 'Upload'}</p>
               </label>
-              {avatarUrl && (
+              {user.profilePic && (
                 <button 
                   onClick={handleRemoveAvatar}
                   className="flex-1 bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl p-2 transition-transform hover:scale-105 cursor-pointer shadow-sm flex items-center justify-center relative overflow-hidden group border border-transparent dark:border-red-500/20 min-h-[40px]"
@@ -264,11 +292,13 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
           <form onSubmit={handleSaveInit} className="space-y-5">
             <div className="flex justify-center mb-6">
               <div className="relative group">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#7c3aed] shadow-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#7c3aed] shadow-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-white text-3xl font-black">
                   {user.profilePic ? (
                     <img src={user.profilePic} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <User size={40} className="text-slate-400" />
+                    <div className="w-full h-full bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] flex items-center justify-center">
+                      {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                    </div>
                   )}
                 </div>
                 {isEditing && (
