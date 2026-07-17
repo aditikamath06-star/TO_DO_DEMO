@@ -28,7 +28,7 @@ app.use('/api/auth', authRouter);
 // Helper to map DB row to JS boolean for completed
 const mapTask = (row) => ({
   ...row,
-  completed: row.completed === 1
+  completed: row.completed === true || row.completed === 1
 });
 
 // 0. Get all users to invite
@@ -56,7 +56,7 @@ app.get('/api/tasks', auth, async (req, res) => {
         SELECT u.email 
         FROM task_collaborators tc 
         JOIN users u ON tc.user_id = u.id 
-        WHERE tc.task_id = ? AND tc.status = "ACCEPTED"
+        WHERE tc.task_id = ? AND tc.status = 'ACCEPTED'
       `, [task.id]);
       task.collaboratorEmails = collabs.map(c => c.email);
     }
@@ -105,7 +105,7 @@ app.get('/api/tasks/search', auth, async (req, res) => {
         SELECT u.email 
         FROM task_collaborators tc 
         JOIN users u ON tc.user_id = u.id 
-        WHERE tc.task_id = ? AND tc.status = "ACCEPTED"
+        WHERE tc.task_id = ? AND tc.status = 'ACCEPTED'
       `, [task.id]);
       task.collaboratorEmails = collabs.map(c => c.email);
     }
@@ -169,7 +169,7 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
   
   try {
     const [tasks] = await pool.execute(
-      'SELECT t.* FROM tasks t LEFT JOIN task_collaborators tc ON t.id = tc.task_id WHERE t.id = ? AND (t.user_id = ? OR (tc.user_id = ? AND tc.status = "ACCEPTED"))', 
+      `SELECT t.* FROM tasks t LEFT JOIN task_collaborators tc ON t.id = tc.task_id WHERE t.id = ? AND (t.user_id = ? OR (tc.user_id = ? AND tc.status = 'ACCEPTED'))`, 
       [id, req.user.id, req.user.id]
     );
     
