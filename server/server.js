@@ -36,9 +36,7 @@ app.get('/api/users', auth, async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT id, username, email FROM users WHERE id != ?', [req.user.id]);
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // 1. Get all tasks for the logged in user (Creator OR ACCEPTED Collaborator)
@@ -64,9 +62,7 @@ app.get('/api/tasks', auth, async (req, res) => {
     }
     
     res.json(rows.map(mapTask));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 // 1.5. Search tasks for the logged in user
 app.get('/api/tasks/search', auth, async (req, res) => {
@@ -115,9 +111,7 @@ app.get('/api/tasks/search', auth, async (req, res) => {
     }
     
     res.json(rows.map(mapTask));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // 2. Create a new task
@@ -134,13 +128,13 @@ app.post('/api/tasks', auth, async (req, res) => {
     priority || 'MEDIUM',
     category || 'WORK',
     dueDate || '',
-    completed ? 1 : 0,
+    completed ? true : false,
     createdAt || Date.now()
   ];
 
   try {
-    const [rows] = await pool.execute(sql, params);
-    const taskId = rows[0].id;
+    const [result] = await pool.execute(sql, params);
+    const taskId = result.insertId;
 
     let validCollaboratorEmails = [];
     if (collaboratorEmails && Array.isArray(collaboratorEmails)) {
@@ -162,13 +156,11 @@ app.post('/api/tasks', auth, async (req, res) => {
       priority: params[3],
       category: params[4],
       dueDate: params[5],
-      completed: params[6] === 1,
+      completed: params[6],
       createdAt: params[7],
       collaboratorEmails: validCollaboratorEmails
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // 3. Update a task (Allowed if Creator OR ACCEPTED Collaborator)
@@ -193,7 +185,7 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
     const priority = req.body.priority !== undefined ? req.body.priority : existingTask.priority;
     const category = req.body.category !== undefined ? req.body.category : existingTask.category;
     const dueDate = req.body.dueDate !== undefined ? req.body.dueDate : existingTask.dueDate;
-    const completed = req.body.completed !== undefined ? (req.body.completed ? 1 : 0) : existingTask.completed;
+    const completed = req.body.completed !== undefined ? (req.body.completed ? true : false) : existingTask.completed;
     const createdAt = req.body.createdAt !== undefined ? req.body.createdAt : existingTask.createdAt;
     const collaboratorEmails = req.body.collaboratorEmails;
 
@@ -245,9 +237,7 @@ app.delete('/api/tasks/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'Task not found or you do not have permission to delete it.' });
     }
     res.json({ message: 'Task deleted', id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // 5. Invite a collaborator
@@ -273,9 +263,7 @@ app.post('/api/tasks/:id/invite', auth, async (req, res) => {
     await pool.execute('INSERT INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, \'PENDING\') ON CONFLICT (task_id, user_id) DO NOTHING', [taskId, userId]);
     
     res.json({ message: 'Invitation sent.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // 6. Get pending requests for the logged in user
@@ -290,9 +278,7 @@ app.get('/api/requests', auth, async (req, res) => {
     `;
     const [rows] = await pool.execute(sql, [req.user.id]);
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // 7. Accept or Decline a request
@@ -320,9 +306,7 @@ app.put('/api/requests/:taskId', auth, async (req, res) => {
     }
     
     res.json({ message: 'Request accepted.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { console.error("!!! SERVER ERROR !!!", err); res.status(500).json({ error: err.message }); }
 });
 
 // Start Server
