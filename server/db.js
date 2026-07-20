@@ -1,54 +1,54 @@
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const pool = new Pool({
-  connectionString: 'postgresql://postgres.lrsbckwyfkulmbjnrsiq:Adap@76800612@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true'
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: 'adap8076',
+  database: 'todolist2_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-// Helper to match mysql2 API so we don't have to rewrite everything
+const originalExecute = pool.execute.bind(pool);
+
 pool.execute = async (sql, params) => {
-  let pgSql = sql;
+  let mySqlStr = sql;
 
-  // Translate MySQL INSERT IGNORE to Postgres ON CONFLICT DO NOTHING
-  const isInsertIgnore = /INSERT IGNORE INTO/i.test(pgSql);
-  if (isInsertIgnore) {
-    pgSql = pgSql.replace(/INSERT IGNORE INTO/ig, 'INSERT INTO');
-    pgSql = pgSql.trim();
-    if (pgSql.endsWith(';')) pgSql = pgSql.slice(0, -1);
-    pgSql += ' ON CONFLICT DO NOTHING';
+  // Translate Postgres ON CONFLICT DO NOTHING to MySQL INSERT IGNORE
+  if (mySqlStr.includes('ON CONFLICT') && mySqlStr.includes('DO NOTHING')) {
+    mySqlStr = mySqlStr.replace(/INSERT INTO/i, 'INSERT IGNORE INTO');
+    mySqlStr = mySqlStr.replace(/ON CONFLICT.*DO NOTHING/i, '');
   }
 
-  // Convert ? to $1, $2, etc for postgres
-  if (params && params.length > 0) {
-    let i = 1;
-    pgSql = pgSql.replace(/\?/g, () => `$${i++}`);
-  }
+  // Convert $1, $2 to ?
+  mySqlStr = mySqlStr.replace(/\$\d+/g, '?');
+
+  // Convert public.users to users
+  mySqlStr = mySqlStr.replace(/public\.users/g, 'users');
+
+  // Convert Postgres double quotes for specific columns
+  mySqlStr = mySqlStr.replace(/"profilePic"/g, 'profilePic');
+  mySqlStr = mySqlStr.replace(/"dueDate"/g, 'dueDate');
+  mySqlStr = mySqlStr.replace(/"createdAt"/g, 'createdAt');
   
-  const isInsert = pgSql.trim().toUpperCase().startsWith('INSERT');
-  const isUpdate = pgSql.trim().toUpperCase().startsWith('UPDATE');
-  const isDelete = pgSql.trim().toUpperCase().startsWith('DELETE');
-
-  // Append RETURNING id for inserts so we can get insertId
-  if (isInsert && !pgSql.toUpperCase().includes('RETURNING')) {
-    pgSql += ' RETURNING id';
-  }
+  // Convert RETURNING id
+  mySqlStr = mySqlStr.replace(/RETURNING id/i, '');
 
   try {
-    const result = await pool.query(pgSql, params);
-    
-    if (isInsert || isUpdate || isDelete) {
-      return [{
-        insertId: (isInsert && result.rows.length > 0) ? result.rows[0].id : null,
-        affectedRows: result.rowCount
-      }];
-    }
-
-    // mysql2 returns [rows, fields] for SELECTs
-    return [result.rows, result.fields];
+    return await originalExecute(mySqlStr, params);
   } catch (err) {
-    console.error('Database Error:', err.message, 'Query:', pgSql);
+    console.error('Database Error:', err.message, 'Query:', mySqlStr);
     throw err;
   }
+};
+
+pool.connect = async () => {
+  const conn = await pool.getConnection();
+  return {
+    release: () => conn.release()
+  };
 };
 
 module.exports = pool;

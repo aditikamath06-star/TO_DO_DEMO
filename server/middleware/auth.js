@@ -1,11 +1,9 @@
-const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const supabaseUrl = 'https://lrsbckwyfkulmbjnrsiq.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyc2Jja3d5Zmt1bG1iam5yc2lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzg5OTIsImV4cCI6MjA5OTc1NDk5Mn0.dkqzDHdkYzvSYwzP7Sq41ag4sO_3yhbkQxaICYv-Y5A';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
 
-module.exports = async function (req, res, next) {
+module.exports = function (req, res, next) {
   const authHeader = req.header('Authorization');
   let token = authHeader;
   
@@ -18,15 +16,10 @@ module.exports = async function (req, res, next) {
   }
 
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      return res.status(401).json({ error: 'Token is not valid' });
-    }
-
-    req.user = { id: user.id, email: user.email };
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = { id: decoded.id, email: decoded.email };
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Server error verifying token' });
+    res.status(401).json({ error: 'Token is not valid' });
   }
 };

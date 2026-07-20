@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings as SettingsIcon, Camera, Mail, User, Eye, EyeOff, Save, Edit2, AlertCircle, Trash2, Lock } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 
 export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, onUserUpdated, user: currentUserProp }) {
   const [user, setUser] = useState(() => {
@@ -46,7 +45,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
         try {
           const token = localStorage.getItem('token');
           const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: base64Str };
-          const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
+          const res = await fetch('http://localhost:5000/api/auth/me', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(body)
@@ -78,7 +77,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     try {
       const token = localStorage.getItem('token');
       const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: '' };
-      const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
+      const res = await fetch('http://localhost:5000/api/auth/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body)
@@ -100,7 +99,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
+      const res = await fetch('http://localhost:5000/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -144,8 +143,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     setIsSaving(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const token = localStorage.getItem('token');
       const body = { 
         username: user.username, 
         email: user.email,
@@ -154,7 +152,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       };
       if (password) body.password = password;
 
-      const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
+      const res = await fetch('http://localhost:5000/api/auth/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -191,9 +189,8 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     setIsDarkMode(newTheme);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:5000/api/auth/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

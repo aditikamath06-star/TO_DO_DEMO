@@ -11,13 +11,7 @@ router.get('/me', auth, async (req, res) => {
     const [rows] = await pool.execute('SELECT id, username, email, theme, "profilePic" FROM public.users WHERE id = $1', [req.user.id]);
     
     if (rows.length === 0) {
-      // Lazy insert the user into public.users since Supabase Auth just created them in auth.users
-      const defaultUsername = req.user.email.split('@')[0];
-      await pool.execute(
-        'INSERT INTO public.users (id, username, email, theme) VALUES ($1, $2, $3, $4)',
-        [req.user.id, defaultUsername, req.user.email, 'light']
-      );
-      return res.json({ id: req.user.id, username: defaultUsername, email: req.user.email, theme: 'light', profilePic: null });
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // Rename postgres column to match frontend expectations

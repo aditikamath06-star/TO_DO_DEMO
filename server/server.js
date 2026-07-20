@@ -16,14 +16,77 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Add simple logging to debug incoming requests
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  res.on('finish', () => {
-    console.log(`-> Responded with status: ${res.statusCode}`);
-  });
   next();
 });
 
-// Routes
+// Import additional modules for auth
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+
 app.use('/api/auth', authRouter);
+
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
+
+// -------------------------------------------------------------
+// NEW LOCAL AUTH ROUTES
+// -------------------------------------------------------------
+
+app.post('/api/auth/signup', async (req, res) => {
+  const { email, password, username } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  try {
+    // Check if user exists
+    const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) return res.status(400).json({ error: 'User already exists' });
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+    
+    // Generate UUID for id
+    const userId = crypto.randomUUID();
+    const finalUsername = username || email.split('@')[0];
+
+    // Insert user
+    await pool.execute(
+      'INSERT INTO users (id, username, email, password_hash, theme) VALUES (?, ?, ?, ?, ?)',
+      [userId, finalUsername, email, password_hash, 'light']
+    );
+
+    // Generate Token
+    const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: userId, email, username: finalUsername } });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Server error during signup' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  try {
+    const [users] = await pool.execute('SELECT id, email, password_hash, username FROM users WHERE email = ?', [email]);
+    if (users.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const user = users[0];
+    
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password_hash || '');
+    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Generate Token
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { id: user.id, email: user.email, username: user.username } });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login' });
+  }
+});
 
 // Helper to map DB row to JS boolean for completed
 const mapTask = (row) => ({
@@ -314,10 +377,10 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   pool.connect()
     .then(client => {
-      console.log('Connected to Supabase PostgreSQL database');
-      client.release();
+      console.log('Connected to MySQL database');
+      if (client && client.release) client.release();
     })
     .catch(err => {
-      console.error('Error connecting to Supabase database:', err);
+      console.error('Error connecting to database:', err);
     });
 });

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, Check, Eye, EyeOff, ChevronLeft } from 'lucide-react';
-import { supabase } from '../supabaseClient';
 
 export default function LoginScreen({ onLoginSuccess, onBack }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -17,34 +16,39 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
     
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
+        const res = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
         });
         
-        if (error) {
-          alert(error.message);
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to login');
           return;
         }
         
-        // Supabase saves the token to local storage automatically
+        localStorage.setItem('token', data.token);
         onLoginSuccess();
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password
+        const res = await fetch('http://localhost:5000/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, username })
         });
         
-        if (error) {
-          alert(error.message);
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Failed to sign up');
           return;
         }
         
+        localStorage.setItem('token', data.token);
         onLoginSuccess();
       }
     } catch (err) {
       console.error(err);
-      alert('Network error connecting to Supabase.');
+      alert('Network error connecting to backend.');
     }
   };
 
