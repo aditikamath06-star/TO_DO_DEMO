@@ -1,25 +1,28 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const { initializeApp, getApps, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+    databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL
+  });
+}
 
-module.exports = function (req, res, next) {
-  const authHeader = req.header('Authorization');
-  let token = authHeader;
-  
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  }
-
-  if (!token) {
-    return res.status(401).json({ error: 'No token, authorization denied' });
-  }
+const verifyToken = async (req, res, next) => {
+  const token = req.headers.authorization?.split('Bearer ')[1];
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = { id: decoded.id, email: decoded.email };
+    const decodedToken = await getAuth().verifyIdToken(token);
+    req.user = decodedToken;
     next();
-  } catch (err) {
-    res.status(401).json({ error: 'Token is not valid' });
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid token' });
   }
 };
+
+module.exports = verifyToken;
