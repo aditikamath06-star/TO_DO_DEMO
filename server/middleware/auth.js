@@ -1,25 +1,11 @@
-const { initializeApp, getApps, cert } = require('firebase-admin/app');
-const { getAuth } = require('firebase-admin/auth');
+const admin = require('firebase-admin');
 
-if (!getApps().length) {
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+if (!admin.apps.length) {
+  // Parse the entire service account JSON object directly
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
-  if (privateKey) {
-    // Check if the key is base64 encoded
-    if (!privateKey.includes('BEGIN PRIVATE KEY')) {
-      privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
-    } else {
-      // Fallback for standard string formatting
-      privateKey = privateKey.replace(/^"(.*)"$/, '$1').replace(/\\n/g, '\n');
-    }
-  }
-
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    }),
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
     databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL
   });
 }
@@ -29,7 +15,7 @@ const verifyToken = async (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const decodedToken = await getAuth().verifyIdToken(token);
+    const decodedToken = await admin.auth().verifyIdToken(token);
     req.user = decodedToken;
     next();
   } catch (error) {
