@@ -1,6 +1,7 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+/*
 const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
@@ -10,6 +11,11 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0
 });
+*/
+const pool = {
+  execute: async () => { return [[], []]; },
+  getConnection: async () => { return { release: () => {} }; }
+};
 
 const originalExecute = pool.execute.bind(pool);
 

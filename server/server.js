@@ -375,6 +375,7 @@ app.put('/api/requests/:taskId', auth, async (req, res) => {
 // Start Server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  /*
   pool.connect()
     .then(client => {
       console.log('Connected to MySQL database');
@@ -383,4 +384,5 @@ app.listen(PORT, () => {
     .catch(err => {
       console.error('Error connecting to database:', err);
     });
+  */
 });
