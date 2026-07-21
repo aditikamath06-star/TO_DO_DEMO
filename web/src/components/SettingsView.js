@@ -45,7 +45,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
         try {
           const token = localStorage.getItem('token');
           const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: base64Str };
-          const res = await fetch('http://localhost:5000/api/auth/me', {
+          const res = await fetch('/api/auth/me', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(body)
@@ -77,7 +77,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     try {
       const token = localStorage.getItem('token');
       const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: '' };
-      const res = await fetch('http://localhost:5000/api/auth/me', {
+      const res = await fetch('/api/auth/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body)
@@ -99,7 +99,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/auth/me', {
+      const res = await fetch('/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -152,7 +152,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       };
       if (password) body.password = password;
 
-      const res = await fetch('http://localhost:5000/api/auth/me', {
+      const res = await fetch('/api/auth/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     
     try {
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:5000/api/auth/me', {
+      await fetch('/api/auth/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

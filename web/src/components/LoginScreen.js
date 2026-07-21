@@ -16,7 +16,7 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
     
     try {
       if (isLogin) {
-        const res = await fetch('http://localhost:5000/api/auth/login', {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -31,7 +31,7 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
         localStorage.setItem('token', data.token);
         onLoginSuccess();
       } else {
-        const res = await fetch('http://localhost:5000/api/auth/signup', {
+        const res = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password, username })
